@@ -1,9 +1,9 @@
 package omx.hdf5;
 
-import ncsa.hdf.hdf5lib.H5;
-import ncsa.hdf.hdf5lib.HDF5Constants;
-import ncsa.hdf.hdf5lib.exceptions.HDF5Exception;
-import ncsa.hdf.hdf5lib.exceptions.HDF5LibraryException;
+import hdf.hdf5lib.H5;
+import hdf.hdf5lib.HDF5Constants;
+import hdf.hdf5lib.exceptions.HDF5Exception;
+import hdf.hdf5lib.exceptions.HDF5LibraryException;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -26,7 +26,7 @@ public class OmxHdf5File implements AutoCloseable {
     private final AtomicBoolean opened;
     private final AtomicBoolean writable;
     private volatile OmxGroup baseGroup;
-    private volatile int fileId;
+    private volatile long fileId;
 
     public OmxHdf5File(Path filePath) {
         this.filePath = filePath;
@@ -221,14 +221,14 @@ public class OmxHdf5File implements AutoCloseable {
 
     private void setupNewFile(int[] shape) {
         try {
-            int rootGroup = H5.H5Gopen(fileId,"/",HDF5Constants.H5P_DEFAULT);
+            long rootGroup = H5.H5Gopen(fileId,"/",HDF5Constants.H5P_DEFAULT);
 
             //write omx version
             byte[] version = Hdf5Util.getData(OmxConstants.OmxVersion.VERSION_02.getVersionString());
-            int datatype = H5.H5Tcopy(OmxHdf5Datatype.OmxJavaType.STRING.getHdf5NativeId());
+            long datatype = H5.H5Tcopy(OmxHdf5Datatype.OmxJavaType.STRING.getHdf5NativeId());
             H5.H5Tset_size(datatype,version.length);
-            int dataspace = H5.H5Screate_simple(1,new long[] {1},null);
-            int attribute = H5.H5Acreate(rootGroup,OmxConstants.OmxNames.OMX_VERSION_KEY.getKey(),datatype,dataspace,HDF5Constants.H5P_DEFAULT,HDF5Constants.H5P_DEFAULT);
+            long dataspace = H5.H5Screate_simple(1,new long[] {1},null);
+            long attribute = H5.H5Acreate(rootGroup,OmxConstants.OmxNames.OMX_VERSION_KEY.getKey(),datatype,dataspace,HDF5Constants.H5P_DEFAULT,HDF5Constants.H5P_DEFAULT);
             H5.H5Awrite(attribute,datatype,version);
             H5.H5Tclose(datatype);
             H5.H5Sclose(dataspace);
@@ -244,7 +244,7 @@ public class OmxHdf5File implements AutoCloseable {
             H5.H5Aclose(attribute);
 
             //add data group
-            int group = H5.H5Gcreate(fileId,"/" + OmxConstants.OmxNames.OMX_DATA_GROUP.getKey(),HDF5Constants.H5P_DEFAULT,HDF5Constants.H5P_DEFAULT,HDF5Constants.H5P_DEFAULT);
+            long group = H5.H5Gcreate(fileId,"/" + OmxConstants.OmxNames.OMX_DATA_GROUP.getKey(),HDF5Constants.H5P_DEFAULT,HDF5Constants.H5P_DEFAULT,HDF5Constants.H5P_DEFAULT);
             H5.H5Gclose(group);
 
             //add lookup group
@@ -262,18 +262,18 @@ public class OmxHdf5File implements AutoCloseable {
         boolean newDataset = !baseGroup.hasDataset(dataset.getName());
         if (newDataset || dataset.isMutated()) {
             //first add dataset if it doesn't exist
-            int datasetId = -1;
+            long datasetId = -1;
             try {
                 if (newDataset) {
-                    int datatype = H5.H5Tcopy(dataset.getDatatype().getNativeDatatypeId());
+                    long datatype = H5.H5Tcopy(dataset.getDatatype().getNativeDatatypeId());
                     int[] shape = dataset.getShape();
                     long[] space = new long[shape.length];
                     for (int i = 0; i < shape.length; i++)
                         space[i] = shape[i];
-                    int dataspace = H5.H5Screate_simple(space.length,space,null);
+                    long dataspace = H5.H5Screate_simple(space.length,space,null);
                     
                     //Use a row-chunked, zip-compressed data format
-                    int plist = H5.H5Pcreate(HDF5Constants.H5P_DATASET_CREATE);
+                    long plist = H5.H5Pcreate(HDF5Constants.H5P_DATASET_CREATE);
                     long[] chunksize = new long[2];
                     chunksize[0] = 1;
                     chunksize[1] = shape[0];
@@ -300,8 +300,8 @@ public class OmxHdf5File implements AutoCloseable {
                     	count[0] = 1;
                     	count[1] = shape[1];
                     	
-                        int memspace = H5.H5Screate_simple(2,count,null);
-                    	int dataspace = H5.H5Dget_space(datasetId);
+                        long memspace = H5.H5Screate_simple(2,count,null);
+                    	long dataspace = H5.H5Dget_space(datasetId);
                     	
                     	//write rows
                         for (int i = 0; i < shape[0]; i++) {
@@ -360,7 +360,7 @@ public class OmxHdf5File implements AutoCloseable {
         String name = group.getName();
         boolean newGroup = !name.equals("/") && !baseGroup.hasGroup(name);
         if (newGroup || group.isMutated()) {
-            int groupId = -1;
+            long groupId = -1;
             try {
                 //write group if it exists
                 if (newGroup)

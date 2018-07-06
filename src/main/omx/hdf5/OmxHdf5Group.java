@@ -1,8 +1,8 @@
 package omx.hdf5;
 
-import ncsa.hdf.hdf5lib.H5;
-import ncsa.hdf.hdf5lib.HDF5Constants;
-import ncsa.hdf.hdf5lib.exceptions.HDF5LibraryException;
+import hdf.hdf5lib.H5;
+import hdf.hdf5lib.HDF5Constants;
+import hdf.hdf5lib.exceptions.HDF5LibraryException;
 
 import java.util.*;
 
@@ -22,15 +22,15 @@ public class OmxHdf5Group extends AbstractOmxGroup {
     private final Map<String,Object> attributes = new HashMap<>();
     private final OmxMutableGroup mutableGroup;
 
-    protected OmxHdf5Group(int fileId, String groupName, String parentName, boolean loadInfo) {
+    protected OmxHdf5Group(long fileId, String groupName, String parentName, boolean loadInfo) {
         name = parentName + (parentName.endsWith("/") ? "" : "/") + groupName;
         if (loadInfo)
             loadGroupInformation(fileId);
         mutableGroup = new OmxModifiableGroup(this);
     }
 
-    public void loadGroupInformation(int fileId) {
-        int groupId = -1;
+    public void loadGroupInformation(long fileId) {
+        long groupId = -1;
         //clear all existing junk
         datasets.clear();
         groups.clear();
@@ -40,7 +40,7 @@ public class OmxHdf5Group extends AbstractOmxGroup {
         attributes.clear();
         try {
             String groupName = getName();
-            int count = H5.H5Gn_members(fileId,groupName);
+            int count = (int) H5.H5Gn_members(fileId,groupName);
             if (count > 0) {
                 String[] oname = new String[count];
                 int[] otype = new int[count];

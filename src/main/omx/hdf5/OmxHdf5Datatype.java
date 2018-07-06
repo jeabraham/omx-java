@@ -1,9 +1,9 @@
 package omx.hdf5;
 
-import ncsa.hdf.hdf5lib.H5;
-import ncsa.hdf.hdf5lib.HDF5Constants;
-import ncsa.hdf.hdf5lib.exceptions.HDF5LibraryException;
-import ncsa.hdf.object.h5.H5Datatype;
+import hdf.hdf5lib.H5;
+import hdf.hdf5lib.HDF5Constants;
+import hdf.hdf5lib.exceptions.HDF5LibraryException;
+import hdf.object.h5.H5Datatype;
 
 import java.util.Objects;
 
@@ -14,14 +14,14 @@ import java.util.Objects;
  *         Started 8/18/13 10:43 AM
  */
 public class OmxHdf5Datatype {
-    private final int datatypeId;
+    private final long datatypeId;
     private final String datatypeName;
     private final OmxJavaType omxJavaType;
 
-    public OmxHdf5Datatype(int datatypeId) {
-        this.datatypeId = datatypeId;
-        datatypeName = H5Datatype.getDatatypeDescription(datatypeId);
-        omxJavaType = OmxJavaType.getJavaTypeForHdf5Id(datatypeId);
+    public OmxHdf5Datatype(long l) {
+        this.datatypeId = l;
+        datatypeName = H5Datatype.getDatatypeDescription(l);
+        omxJavaType = OmxJavaType.getJavaTypeForHdf5Id(l);
     }
 
     public boolean equals(Object other) {
@@ -35,7 +35,7 @@ public class OmxHdf5Datatype {
         return Objects.hashCode(omxJavaType);
     }
 
-    public int getNativeDatatypeId() {
+    public long getNativeDatatypeId() {
         try {
             return H5.H5Tget_native_type(datatypeId);
         } catch (HDF5LibraryException e) {
@@ -43,7 +43,7 @@ public class OmxHdf5Datatype {
         }
     }
 
-    public int getDatatypeId() {
+    public long getDatatypeId() {
         return datatypeId;
     }
 
@@ -63,19 +63,19 @@ public class OmxHdf5Datatype {
         BYTE(HDF5Constants.H5T_NATIVE_CHAR,byte.class,1),
         STRING(HDF5Constants.H5T_C_S1,String.class,-1);
 
-        private final int hdf5NativeId;
+        private final long hdf5NativeId;
         private final Class<?> javaClass;
-        private final int dataLength;
+        private final long dataLength;
 
-        private OmxJavaType(int hdf5NativeId, Class<?> javaClass, int dataLength) {
+        private OmxJavaType(long hdf5NativeId, Class<?> javaClass, int dataLength) {
             this.hdf5NativeId = hdf5NativeId;
             this.javaClass = javaClass;
             this.dataLength = dataLength;
         }
 
-        public static OmxJavaType getJavaTypeForHdf5Id(int hdf5Id) {
+        public static OmxJavaType getJavaTypeForHdf5Id(long hdf5Id) {
             try {
-                int hdf5Native = H5.H5Tget_native_type(hdf5Id);
+                long hdf5Native = H5.H5Tget_native_type(hdf5Id);
                 
                 //System.out.println(H5Datatype.getDatatypeDescription(hdf5Native).toLowerCase());
                 
@@ -113,11 +113,11 @@ public class OmxHdf5Datatype {
             return javaClass;
         }
 
-        public int getHdf5NativeId() {
+        public long getHdf5NativeId() {
             return hdf5NativeId;
         }
 
-        public int getDataLength() {
+        public long getDataLength() {
             return dataLength;
         }
 
@@ -332,13 +332,13 @@ public class OmxHdf5Datatype {
         H5T_VARIABLE(HDF5Constants.H5T_VARIABLE),
         H5T_VLEN(HDF5Constants.H5T_VLEN);
 
-        private final int hdf5TypeId;
+        private final long hdf5TypeId;
 
-        private H5Type(int hdf5TypeId) {
+        private H5Type(long hdf5TypeId) {
             this.hdf5TypeId = hdf5TypeId;
         }
 
-        public static H5Type getTypeForId(int hdf5Id) {
+        public static H5Type getTypeForId(long hdf5Id) {
             for (H5Type type : values()) {
                 try {
                     if (H5.H5Tequal(type.hdf5TypeId,hdf5Id))

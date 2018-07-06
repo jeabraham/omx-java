@@ -1,9 +1,9 @@
 package omx.hdf5;
 
-import ncsa.hdf.hdf5lib.H5;
-import ncsa.hdf.hdf5lib.HDF5Constants;
-import ncsa.hdf.hdf5lib.exceptions.HDF5Exception;
-import ncsa.hdf.hdf5lib.exceptions.HDF5LibraryException;
+import hdf.hdf5lib.H5;
+import hdf.hdf5lib.HDF5Constants;
+import hdf.hdf5lib.exceptions.HDF5Exception;
+import hdf.hdf5lib.exceptions.HDF5LibraryException;
 
 import java.lang.reflect.Array;
 import java.util.*;
@@ -17,25 +17,25 @@ import omx.hdf5.OmxHdf5Datatype.OmxJavaType;
  *         Started 8/18/13 9:34 AM
  */
 public class OmxHdf5Dataset implements OmxDataset {
-    private final int fileId;
+    private final long fileId;
     private final String name;
     private final int[] shape;
     private final OmxHdf5Datatype datatype;
     private final Map<String,Object> attributes;
     private final OmxMutableDataset mutableDataset;
 
-    OmxHdf5Dataset(int fileId, String datasetName, String parentName) {
-        this.fileId = fileId;
+    OmxHdf5Dataset(long fileId2, String datasetName, String parentName) {
+        this.fileId = fileId2;
         name = parentName + (parentName.endsWith("/") ? "" : "/") + datasetName;
-        int datasetId = -1;
+        long datasetId = -1;
         try {
-            datasetId = H5.H5Dopen(fileId,name,HDF5Constants.H5P_DEFAULT);
+            datasetId = H5.H5Dopen(fileId2,name,HDF5Constants.H5P_DEFAULT);
 
             //get datatype
             datatype = new OmxHdf5Datatype(H5.H5Dget_type(datasetId));
 
             //get shape
-            int dataspaceId = H5.H5Dget_space(datasetId);
+            long dataspaceId = H5.H5Dget_space(datasetId);
             long nDims = H5.H5Sget_simple_extent_ndims(dataspaceId);
             long[] dimSize = new long[(int) nDims];
             long[] maxDimSize =  new long[(int) nDims];
@@ -82,7 +82,7 @@ public class OmxHdf5Dataset implements OmxDataset {
     }
 
     private Object copyData() {
-        int datasetId = -1;
+        long datasetId = -1;
         
         //data container
         Object arrayForData = Array.newInstance(getDatatype().getOmxJavaType().getJavaClass(),getShape());
@@ -102,8 +102,8 @@ public class OmxHdf5Dataset implements OmxDataset {
             	count[0] = 1;
             	count[1] = shape[1];
             	
-                int memspace = H5.H5Screate_simple(2,count,null);
-            	int dataspace = H5.H5Dget_space(datasetId);
+                long memspace = H5.H5Screate_simple(2,count,null);
+            	long dataspace = H5.H5Dget_space(datasetId);
             	
             	//read rows
                 for (int i = 0; i < shape[0]; i++) {

@@ -1,10 +1,10 @@
 package omx.hdf5;
 
-import ncsa.hdf.hdf5lib.H5;
-import ncsa.hdf.hdf5lib.HDF5Constants;
-import ncsa.hdf.hdf5lib.exceptions.HDF5Exception;
-import ncsa.hdf.hdf5lib.exceptions.HDF5LibraryException;
-import ncsa.hdf.hdf5lib.structs.H5O_info_t;
+import hdf.hdf5lib.H5;
+import hdf.hdf5lib.HDF5Constants;
+import hdf.hdf5lib.exceptions.HDF5Exception;
+import hdf.hdf5lib.exceptions.HDF5LibraryException;
+import hdf.hdf5lib.structs.H5O_info_t;
 
 import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
@@ -19,17 +19,17 @@ import java.util.*;
  */
 public class Hdf5Util {
 
-    public static Map<String,Object> getAttributes(int id) {
+    public static Map<String,Object> getAttributes(long groupId) {
         Map<String,Object> attributes = new HashMap<>();
         try {
-            H5O_info_t info = H5.H5Oget_info(id);
+            H5O_info_t info = H5.H5Oget_info(groupId);
             for (int i = 0; i < info.num_attrs; i++) {
-                int attributeId = H5.H5Aopen_by_idx(id,".",HDF5Constants.H5_INDEX_CRT_ORDER,HDF5Constants.H5_ITER_INC,i,HDF5Constants.H5P_DEFAULT, HDF5Constants.H5P_DEFAULT);
+                long attributeId = H5.H5Aopen_by_idx(groupId,".",HDF5Constants.H5_INDEX_CRT_ORDER,HDF5Constants.H5_ITER_INC,i,HDF5Constants.H5P_DEFAULT, HDF5Constants.H5P_DEFAULT);
                 String[] attributeNameHolder = new String[1];
-                H5.H5Aget_name(attributeId,256,attributeNameHolder); //256 is from digging through HDF5 code, this is the max size for an attribute name
+                attributeNameHolder[0] = H5.H5Aget_name(attributeId); //256 is from digging through HDF5 code, this is the max size for an attribute name
                 int size = (int) H5.H5Aget_storage_size(attributeId);
                 byte[] data = new byte[size];
-                int attributeType = H5.H5Aget_type(attributeId);
+                long attributeType = H5.H5Aget_type(attributeId);
                 H5.H5Aread(attributeId,attributeType,data);
                 attributes.put(attributeNameHolder[0],readData(attributeType,data));
                 H5.H5Aclose(attributeId);
@@ -40,13 +40,13 @@ public class Hdf5Util {
         return attributes;
     }
 
-    public static void deleteAttributes(int id) {
+    public static void deleteAttributes(long id) {
         try {
             H5O_info_t info = H5.H5Oget_info(id);
             for (int i = 0; i < info.num_attrs; i++) {
-                int attributeId = H5.H5Aopen_by_idx(id,".",HDF5Constants.H5_INDEX_CRT_ORDER,HDF5Constants.H5_ITER_INC,0,HDF5Constants.H5P_DEFAULT, HDF5Constants.H5P_DEFAULT);
+                long attributeId = H5.H5Aopen_by_idx(id,".",HDF5Constants.H5_INDEX_CRT_ORDER,HDF5Constants.H5_ITER_INC,0,HDF5Constants.H5P_DEFAULT, HDF5Constants.H5P_DEFAULT);
                 String[] attributeNameHolder = new String[1];
-                H5.H5Aget_name(attributeId,256,attributeNameHolder); //256 is from digging through HDF5 code, this is the max size for an attribute name
+                attributeNameHolder[0] = H5.H5Aget_name(attributeId); //256 is from digging through HDF5 code, this is the max size for an attribute name
                 H5.H5Aclose(attributeId);
                 H5.H5Adelete(id,attributeNameHolder[0]);
             }
@@ -55,7 +55,7 @@ public class Hdf5Util {
         }
     }
 
-    public static int getDatatype(Object o) {
+    public static long getDatatype(Object o) {
         Class<?> c = o.getClass();
         while (c.isArray())
             c = c.getComponentType();
@@ -97,7 +97,7 @@ public class Hdf5Util {
         return space;
     }
 
-    public static int getDataspace(long[] space) {
+    public static long getDataspace(long[] space) {
         try {
             return H5.H5Screate_simple(space.length,space,null);
         } catch (HDF5Exception e) {
@@ -105,15 +105,15 @@ public class Hdf5Util {
         }
     }
 
-    public static void writeAttribute(int id, String attributeName, Object attributeValue) {
+    public static void writeAttribute(long datasetId, String attributeName, Object attributeValue) {
         try {
             long[] dataspaceDimension = getDataspaceDimensions(attributeValue);
-            int datatype = getDatatype(attributeValue);
+            long datatype = getDatatype(attributeValue);
             byte[] data = Hdf5Util.getData(attributeValue,dataspaceDimension);
             if (attributeValue.getClass() == String.class)
                 H5.H5Tset_size(datatype,data.length);
-            int dataspace = getDataspace(dataspaceDimension);
-            int attribute = H5.H5Acreate(id,attributeName,datatype,dataspace,HDF5Constants.H5P_DEFAULT,HDF5Constants.H5P_DEFAULT);
+            long dataspace = getDataspace(dataspaceDimension);
+            long attribute = H5.H5Acreate(datasetId,attributeName,datatype,dataspace,HDF5Constants.H5P_DEFAULT,HDF5Constants.H5P_DEFAULT);
             H5.H5Awrite(attribute,datatype,data);
             H5.H5Tclose(datatype);
             H5.H5Sclose(dataspace);
@@ -123,11 +123,11 @@ public class Hdf5Util {
         }
     }
 
-    public static Object readData(int h5AttributeType, byte[] data) {
+    public static Object readData(long h5AttributeType, byte[] data) {
         OmxHdf5Datatype.OmxJavaType javaType = OmxHdf5Datatype.OmxJavaType.getJavaTypeForHdf5Id(h5AttributeType);
         if (javaType == null) //don't know this
             return data;
-        int dataLength = javaType.getDataLength();
+        long dataLength = javaType.getDataLength();
         if (dataLength > 0) //a sanity check for now
             assert data.length % dataLength == 0;
         switch (javaType) {
@@ -135,7 +135,7 @@ public class Hdf5Util {
                 ByteBuffer byteBuffer = ByteBuffer.wrap(data);
                 byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
                 if (data.length > dataLength) {
-                    int[] result = new int[data.length / dataLength];
+                    int[] result = new int[(int) (data.length / dataLength)];
                     for (int i = 0; i < result.length; i++)
                         result[i] = byteBuffer.getInt();
                     return result;
@@ -147,7 +147,7 @@ public class Hdf5Util {
                 ByteBuffer byteBuffer = ByteBuffer.wrap(data);
                 byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
                 if (data.length > dataLength) {
-                    short[] result = new short[data.length / dataLength];
+                    short[] result = new short[(int) (data.length / dataLength)];
                     for (int i = 0; i < result.length; i++)
                         result[i] = byteBuffer.getShort();
                     return result;
@@ -159,7 +159,7 @@ public class Hdf5Util {
                 ByteBuffer byteBuffer = ByteBuffer.wrap(data);
                 byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
                 if (data.length > dataLength) {
-                    float[] result = new float[data.length / dataLength];
+                    float[] result = new float[(int) (data.length / dataLength)];
                     for (int i = 0; i < result.length; i++)
                         result[i] = byteBuffer.getFloat();
                     return result;
@@ -171,7 +171,7 @@ public class Hdf5Util {
                 ByteBuffer byteBuffer = ByteBuffer.wrap(data);
                 byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
                 if (data.length > dataLength) {
-                    double[] result = new double[data.length / dataLength];
+                    double[] result = new double[(int) (data.length / dataLength)];
                     for (int i = 0; i < result.length; i++)
                         result[i] = byteBuffer.getDouble();
                     return result;
@@ -183,7 +183,7 @@ public class Hdf5Util {
                 ByteBuffer byteBuffer = ByteBuffer.wrap(data);
                 byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
                 if (data.length > dataLength) {
-                    byte[] result = new byte[data.length / dataLength];
+                    byte[] result = new byte[(int) (data.length / dataLength)];
                     for (int i = 0; i < result.length; i++)
                         result[i] = byteBuffer.get();
                     return result;
@@ -301,7 +301,7 @@ public class Hdf5Util {
     }
 
     public static byte[] getData(short[] data) {
-        ByteBuffer byteBuffer = ByteBuffer.allocate(OmxHdf5Datatype.OmxJavaType.SHORT.getDataLength()*data.length);
+        ByteBuffer byteBuffer = ByteBuffer.allocate((int) (OmxHdf5Datatype.OmxJavaType.SHORT.getDataLength()*data.length));
         byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
         for (short i : data)
             byteBuffer.putShort(i);
@@ -309,7 +309,7 @@ public class Hdf5Util {
     }
 
     public static byte[] getData(int[] data) {
-        ByteBuffer byteBuffer = ByteBuffer.allocate(OmxHdf5Datatype.OmxJavaType.INT.getDataLength()*data.length);
+        ByteBuffer byteBuffer = ByteBuffer.allocate((int) (OmxHdf5Datatype.OmxJavaType.INT.getDataLength()*data.length));
         byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
         for (int i : data)
             byteBuffer.putInt(i);
@@ -317,7 +317,7 @@ public class Hdf5Util {
     }
 
     public static byte[] getData(float[] data) {
-        ByteBuffer byteBuffer = ByteBuffer.allocate(OmxHdf5Datatype.OmxJavaType.FLOAT.getDataLength()*data.length);
+        ByteBuffer byteBuffer = ByteBuffer.allocate((int) (OmxHdf5Datatype.OmxJavaType.FLOAT.getDataLength()*data.length));
         byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
         for (float f : data)
             byteBuffer.putFloat(f);
@@ -325,7 +325,7 @@ public class Hdf5Util {
     }
 
     public static byte[] getData(double[] data) {
-        ByteBuffer byteBuffer = ByteBuffer.allocate(OmxHdf5Datatype.OmxJavaType.DOUBLE.getDataLength()*data.length);
+        ByteBuffer byteBuffer = ByteBuffer.allocate((int) (OmxHdf5Datatype.OmxJavaType.DOUBLE.getDataLength()*data.length));
         byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
         for (double d : data)
             byteBuffer.putDouble(d);
